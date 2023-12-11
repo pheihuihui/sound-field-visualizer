@@ -21,5 +21,17 @@ es.buildSync({
     format: "esm",
     tsconfig: "./tsconfig.json",
     platform: "browser",
-    treeShaking: true
+    treeShaking: false,
+    sourcemap: true
 })
+
+// es.buildSync({
+//     entryPoints: ["./src/index.js"],
+//     outfile: `${dir_client}/client.js`,
+//     minify: false,
+//     bundle: false,
+//     format: "esm",
+//     platform: "browser",
+//     treeShaking: true,
+//     sourcemap: true
+// })
