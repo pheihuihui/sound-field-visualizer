@@ -19,6 +19,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js"
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import { BufferGeometryUtils } from "three/examples/jsm/Addons.js"
+import { logSocket } from "./data"
 
 let container: HTMLDivElement
 let particles: Points
@@ -29,6 +30,7 @@ const params = {
     tension: 0.5,
     centripetal: true,
     chordal: true,
+    server: "http://localhost:3000",
 }
 
 const PARTICLE_SIZE = 25
@@ -40,7 +42,7 @@ function init() {
     container = document.getElementById("container")
 
     scene = new Scene()
-    scene.background = new Color(0xf0f0f0)
+    scene.background = new Color(0x000000)
 
     camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000)
     camera.position.set(0, 250, 1000)
@@ -76,7 +78,7 @@ function init() {
 
     // particles
 
-    let boxGeometry = new BoxGeometry(200, 200, 200, 4, 4, 4)
+    let boxGeometry = new BoxGeometry(200, 200, 200, 4, 8, 16)
 
     // if normal and uv attributes are not removed, mergeVertices() can't consolidate indentical vertices with different normal/uv data
 
@@ -117,6 +119,8 @@ function init() {
     })
 
     particles = new Points(geometry, material)
+    // make particles shine
+    particles.scale.multiplyScalar(1.5)
     scene.add(particles)
     //
 
@@ -128,9 +132,17 @@ function init() {
 
     const gui = new GUI()
 
+    let sserver = localStorage.getItem("socketServer")
+    if (sserver) {
+        params.server = sserver
+    }
+
     gui.add(params, "uniform").onChange(render)
     gui.add(params, "centripetal").onChange(render)
     gui.add(params, "chordal").onChange(render)
+    gui.add(params, "server").onChange((val) => {
+        localStorage.setItem("socketServer", val)
+    })
     gui.open()
 
     // Controls
@@ -156,3 +168,5 @@ function onWindowResize() {
 
     render()
 }
+
+logSocket()
