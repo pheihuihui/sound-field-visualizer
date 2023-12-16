@@ -30,7 +30,7 @@ const params = {
     tension: 0.5,
     centripetal: true,
     chordal: true,
-    server: "http://localhost:3000",
+    server: "ws://localhost:8080",
 }
 
 const PARTICLE_SIZE = 25
@@ -111,7 +111,7 @@ function init() {
     const material = new ShaderMaterial({
         uniforms: {
             color: { value: new Color(0xffffff) },
-            pointTexture: { value: new TextureLoader().load("/ball.png") },
+            pointTexture: { value: new TextureLoader().load("./ball.png") },
             alphaTest: { value: 0.5 },
         },
         vertexShader: document.getElementById("vertexshader")!.textContent!,
