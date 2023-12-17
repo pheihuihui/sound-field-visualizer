@@ -3,7 +3,6 @@ export function logSocket() {
     const socket = new WebSocket(server)
     socket.addEventListener("message", (event) => {
         window.sound = event.data as string
-        console.log(window.sound)
     })
     socket.addEventListener("open", (event) => {
         console.log("Connected to server")
