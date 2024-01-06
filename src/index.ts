@@ -19,6 +19,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js"
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import { logSocket } from "./sound"
+import { createTable16x16 } from "./table"
 
 let container: HTMLDivElement
 let particles: Points
@@ -34,7 +35,7 @@ const params = {
 
 const PARTICLE_SIZE = 25
 
-init()
+// init()
 
 function init() {
     // @ts-ignore
@@ -147,5 +148,7 @@ function onWindowResize() {
 
     render()
 }
+
+createTable16x16()
 
 logSocket()
