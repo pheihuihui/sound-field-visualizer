@@ -1,17 +1,22 @@
 import {
+    AdditiveBlending,
     BufferAttribute,
     BufferGeometry,
+    CanvasTexture,
     Color,
     Float32BufferAttribute,
     GridHelper,
     Mesh,
+    NormalBufferAttributes,
     PerspectiveCamera,
     PlaneGeometry,
     Points,
+    PointsMaterial,
     Scene,
     ShaderMaterial,
     ShadowMaterial,
     TextureLoader,
+    Uint8ClampedBufferAttribute,
     WebGLRenderer,
 } from "three"
 
@@ -21,9 +26,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import { logSocket } from "./sound"
 
 let container: HTMLDivElement
-let particles: Points
 let camera: PerspectiveCamera, scene: Scene, renderer: WebGLRenderer
 let lastTimestamp = 0
+let particleID = 0
 
 const params = {
     uniform: true,
@@ -92,54 +97,76 @@ function init() {
     })
     gui.open()
 
-    // Controls
     const controls = new OrbitControls(camera, renderer.domElement)
     // @ts-ignore
     controls.damping = 0.2
 
     window.addEventListener("resize", onWindowResize)
+    addParticles()
 
     render()
 }
 
-const material = new ShaderMaterial({
-    uniforms: {
-        color: { value: new Color(0x00ffff) },
-        pointTexture: { value: new TextureLoader().load("./ball.png") },
-        alphaTest: { value: 0.5 },
-    },
-    vertexShader: document.getElementById("vertexshader")!.textContent!,
-    fragmentShader: document.getElementById("fragmentshader")!.textContent!,
-})
+function addParticles() {
+    const positionAttribute = new Float32BufferAttribute(new Float32Array(3 * 256), 3)
+    const colorAttribute = new Float32BufferAttribute(new Float32Array(3 * 256).fill(0.5), 3)
+    const sizeAttribute = new Float32BufferAttribute(new Float32Array(256).fill(PARTICLE_SIZE), 1)
 
-function render() {
-    const positionAttribute = new BufferAttribute(new Float32Array(3 * 256), 3)
-    const colors: number[] = []
-    const sizeAttribute = new Float32BufferAttribute(new Array(256).fill(PARTICLE_SIZE), 1)
-    let nodes = window.sound?.data
-    let time = window.sound?.time
-    if (nodes && nodes.length == 256 && time && time != lastTimestamp) {
-        for (let i = 0; i < 16; i++) {
-            for (let j = 0; j < 16; j++) {
-                let idx = i * 16 + j
-                let node = nodes[i * 16 + j]
-                positionAttribute.setXYZ(idx, i * 50 - 400, 0, j * 50 - 400)
-                colors.push(node, node, node)
-            }
+    let canvas = document.createElement("canvas")
+    canvas.width = 256
+    canvas.height = 256
+    let context = canvas.getContext("2d")
+
+    let gradient = context!.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2)
+    gradient.addColorStop(0, "rgba(255,255,255,1)")
+    gradient.addColorStop(1, "rgba(0,0,0,1)")
+    context!.fillStyle = gradient
+    context!.fillRect(0, 0, canvas.width, canvas.height)
+
+    let texture = new CanvasTexture(canvas)
+
+    const material = new PointsMaterial({
+        color: 0xffffff,
+        size: 20.0,
+        map: texture,
+        transparent: false,
+        blending: AdditiveBlending,
+        depthTest: false,
+        vertexColors: true,
+    })
+
+    for (let i = 0; i < 16; i++) {
+        for (let j = 0; j < 16; j++) {
+            let idx = i * 16 + j
+            positionAttribute.setXYZ(idx, j * 50 - 400, 0, i * 50 - 400)
         }
-        lastTimestamp = time
     }
-    const colorAttribute = new Float32BufferAttribute(new Float32Array(colors), 3)
 
     const geometry = new BufferGeometry()
     geometry.setAttribute("position", positionAttribute)
     geometry.setAttribute("customColor", colorAttribute)
     geometry.setAttribute("size", sizeAttribute)
 
-    particles = new Points(geometry, material)
-    particles.scale.multiplyScalar(1.5)
+    const particles = new Points(geometry, material)
+    particleID = particles.id
     scene.add(particles)
+}
 
+function render() {
+    let obj = scene.getObjectById(particleID) as Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>
+    let time = window.sound?.time
+    let frames = window.sound?.data
+    if (time && time > lastTimestamp && frames && frames.length == 256) {
+        for (let i = 0; i < 16; i++) {
+            for (let j = 0; j < 16; j++) {
+                let idx = i * 16 + j
+                let tmp = frames[idx] / 255
+                obj.geometry.attributes.customColor.setXYZ(idx, tmp, tmp, tmp)
+            }
+        }
+        obj.geometry.attributes.customColor.needsUpdate = true
+        lastTimestamp = time
+    }
     renderer.render(scene, camera)
     requestAnimationFrame(render)
 }

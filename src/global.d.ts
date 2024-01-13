@@ -6,6 +6,7 @@ export interface SoundFrame {
 export declare global {
     interface Window {
         socket: WebSocket
-        sound: SoundFrame?
+        sound?: SoundFrame
+        listAllObjects: () => void
     }
 }
