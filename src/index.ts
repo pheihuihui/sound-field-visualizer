@@ -1,6 +1,5 @@
 import {
     AdditiveBlending,
-    BufferAttribute,
     BufferGeometry,
     CanvasTexture,
     Color,
@@ -13,10 +12,7 @@ import {
     Points,
     PointsMaterial,
     Scene,
-    ShaderMaterial,
     ShadowMaterial,
-    TextureLoader,
-    Uint8ClampedBufferAttribute,
     WebGLRenderer,
 } from "three"
 
@@ -28,7 +24,7 @@ import { logSocket } from "./sound"
 let container: HTMLDivElement
 let camera: PerspectiveCamera, scene: Scene, renderer: WebGLRenderer
 let lastTimestamp = 0
-let particleID = 0
+let particles: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>
 
 const params = {
     uniform: true,
@@ -39,7 +35,7 @@ const params = {
     recordServer: "http://localhost:3000",
 }
 
-const PARTICLE_SIZE = 100
+const PARTICLE_SIZE = 10
 
 init()
 
@@ -76,7 +72,6 @@ function init() {
     container.appendChild(renderer.domElement)
 
     const gui = new GUI()
-
     let sserver = localStorage.getItem("socketServer")
     let rserver = localStorage.getItem("recordServer")
     if (sserver) {
@@ -85,10 +80,6 @@ function init() {
     if (rserver) {
         params.recordServer = rserver
     }
-
-    gui.add(params, "uniform").onChange(render)
-    gui.add(params, "centripetal").onChange(render)
-    gui.add(params, "chordal").onChange(render)
     gui.add(params, "socketServer").onChange((val) => {
         localStorage.setItem("socketServer", val)
     })
@@ -115,13 +106,13 @@ function addParticles() {
     let canvas = document.createElement("canvas")
     canvas.width = 256
     canvas.height = 256
-    let context = canvas.getContext("2d")
+    let context = canvas.getContext("2d")!
 
-    let gradient = context!.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2)
+    let gradient = context.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2)
     gradient.addColorStop(0, "rgba(255,255,255,1)")
     gradient.addColorStop(1, "rgba(0,0,0,1)")
-    context!.fillStyle = gradient
-    context!.fillRect(0, 0, canvas.width, canvas.height)
+    context.fillStyle = gradient
+    context.fillRect(0, 0, canvas.width, canvas.height)
 
     let texture = new CanvasTexture(canvas)
 
@@ -129,7 +120,7 @@ function addParticles() {
         color: 0xffffff,
         size: 20.0,
         map: texture,
-        transparent: false,
+        transparent: true,
         blending: AdditiveBlending,
         depthTest: false,
         vertexColors: true,
@@ -144,27 +135,25 @@ function addParticles() {
 
     const geometry = new BufferGeometry()
     geometry.setAttribute("position", positionAttribute)
-    geometry.setAttribute("customColor", colorAttribute)
+    geometry.setAttribute("color", colorAttribute)
     geometry.setAttribute("size", sizeAttribute)
 
-    const particles = new Points(geometry, material)
-    particleID = particles.id
+    particles = new Points(geometry, material)
     scene.add(particles)
 }
 
 function render() {
-    let obj = scene.getObjectById(particleID) as Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>
     let time = window.sound?.time
     let frames = window.sound?.data
     if (time && time > lastTimestamp && frames && frames.length == 256) {
         for (let i = 0; i < 16; i++) {
             for (let j = 0; j < 16; j++) {
                 let idx = i * 16 + j
-                let tmp = frames[idx] / 255
-                obj.geometry.attributes.customColor.setXYZ(idx, tmp, tmp, tmp)
+                let tmp = frames[idx] / 256
+                particles.geometry.attributes.color.setXYZ(idx, tmp, tmp, tmp)
             }
         }
-        obj.geometry.attributes.customColor.needsUpdate = true
+        particles.geometry.attributes.color.needsUpdate = true
         lastTimestamp = time
     }
     renderer.render(scene, camera)
@@ -174,9 +163,7 @@ function render() {
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
-
     renderer.setSize(window.innerWidth, window.innerHeight)
-
     render()
 }
 
